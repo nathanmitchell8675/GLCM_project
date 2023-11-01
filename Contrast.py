@@ -41,9 +41,13 @@ for n in range(num1, num2):
     tiles = []
     convolve_tiles = []
     glcms = []
+    glcms_c = []
 
     contrast_value  = []
     contrast_values = []
+
+    contrast_value_c  = []
+    contrast_values_c = []
 
     c_tile_means = []
     c_tile_mins  = []
@@ -58,7 +62,6 @@ for n in range(num1, num2):
     kernel_3 = np.ones((7,7), np.float32)/49
     #9x9 convolve mask
     kernel_4 = np.ones((9,9), np.float32)/81
-
 
     #Applies the desired Kernel
     convolve_data = cv.filter2D(src = data, ddepth = -1, kernel = kernel_4)
@@ -87,8 +90,19 @@ for n in range(num1, num2):
             glcm=(glcm0 + glcm1 + glcm2 + glcm3)/4 #compute mean matrix
             glcms.append(glcm)
 
-            contrast = (float(graycoprops(glcm, 'contrast')))
+            #GLCM for Convolved Data
+            glcm0_c = graycomatrix(convolve_tile, distances = distances, angles = [0],           levels = 256, symmetric = False)
+            glcm1_c = graycomatrix(convolve_tile, distances = distances, angles = [np.pi/4],     levels = 256, symmetric = False)
+            glcm2_c = graycomatrix(convolve_tile, distances = distances, angles = [np.pi/2],     levels = 256, symmetric = False)
+            glcm3_c = graycomatrix(convolve_tile, distances = distances, angles = [3 * np.pi/4], levels = 256, symmetric = False)
+            glcm_c  = (glcm0_c + glcm1_c + glcm2_c + glcm3_c)/4 #compute mean matrix
+            glcms_c.append(glcm_c)
+
+            contrast   = (float(graycoprops(glcm, 'contrast').ravel()[0]))
             contrast_value.append(contrast)
+
+            contrast_c = (float(graycoprops(glcm_c, 'contrast').ravel()[0]))
+            contrast_value_c.append(contrast_c)
 
     c_mean_avg = np.mean(c_tile_means)
     c_mins_avg = np.mean(c_tile_mins)
@@ -99,31 +113,53 @@ for n in range(num1, num2):
     c_tile_mins = np.array(c_tile_mins)
     c_tile_mins = c_tile_mins.reshape((int(256/tile_size), int(256/tile_size)))
 
-    c_mean_mask = (c_tile_means >= c_mean_avg + 10).astype(int)
-    c_min_mask  = (c_tile_mins  >= c_mins_avg + 10).astype(int)
+    c_mean_mask = (c_tile_means >= c_mean_avg).astype(int)
+    c_min_mask  = (c_tile_mins  >= c_mins_avg).astype(int)
 
-    contrast_max = max(contrast_value)
+
+    contrast_max   = max(contrast_value)
+    contrast_max_c = max(contrast_value_c)
 
     for val in contrast_value:
         contrast_values.append(val/contrast_max)
 
+    for val in contrast_value_c:
+        contrast_values_c.append(val/contrast_max_c)
+
     #Declare feature
     feature = 'contrast'
-    feature_values =  contrast_values
+    feature_values   =  contrast_values
+    feature_values_c = contrast_values_c
+    fig, ax = plt.subplots(3,5)
 
-    fig, ax = plt.subplots(3,3)
+    # og pic # convolve #           # ground truth # convolve
+    # glcm   # con glcm # min mask  # min on glcm  # min on convolve
+    #        #          # mean mask # mean on glcm # mean on convolve
 
-    ax[0,0].imshow(data, cmap='gray', origin='lower')
-    ax[0,1].imshow(convolve_data, cmap='gray', origin='lower')
-    ax[0,2].imshow(data_truth, cmap = 'gray', origin = 'lower')
-
+    ### COLUMN 1 ###
+    ax[0,0].imshow(data, cmap = 'gray', origin = 'lower')
     ax[1,0].imshow(data, cmap = 'gray', origin = 'lower')
-    ax[1,1].imshow(data, cmap = 'gray', origin = 'lower')
-    ax[1,2].imshow(data, cmap = 'gray', origin = 'lower')
-
     ax[2,0].set_visible(False)
-    ax[2,1].imshow(data, cmap = 'gray', origin = 'lower')
+
+    ### COLUMN 2 ###
+    ax[0,1].imshow(convolve_data, cmap = 'gray', origin = 'lower')
+    ax[1,1].imshow(data, cmap = 'gray', origin = 'lower')
+    ax[2,1].set_visible(False)
+
+    ### COLUMN  3 ###
+    ax[0,2].set_visible(False)
+    ax[1,2].imshow(data, cmap = 'gray', origin = 'lower')
     ax[2,2].imshow(data, cmap = 'gray', origin = 'lower')
+
+    ### COLUMN 4 ###
+    ax[0,3].imshow(data_truth, cmap = 'gray', origin = 'lower')
+    ax[1,3].imshow(data, cmap = 'gray', origin = 'lower')
+    ax[2,3].imshow(data, cmap = 'gray', origin = 'lower')
+
+    ### COLUMN 5 ###
+    ax[0,4].set_visible(False)
+    ax[1,4].imshow(data, cmap = 'gray', origin = 'lower')
+    ax[2,4].imshow(data, cmap = 'gray', origin = 'lower')
 
     plt.xlim(0,256)
     plt.ylim(0,256)
@@ -141,6 +177,9 @@ for n in range(num1, num2):
             rect_original  = plt.Rectangle((x_offset, y_offset), tile_size, tile_size,
                              facecolor='red', edgecolor='none', alpha=feature_values[(int(256/tile_size))*int(r/tile_size) + int(c/tile_size)])
 
+            rect_convolve  = plt.Rectangle((x_offset, y_offset), tile_size, tile_size,
+                             facecolor='red', edgecolor='none', alpha=feature_values_c[(int(256/tile_size))*int(r/tile_size) + int(c/tile_size)])
+
             rect_for_min   = plt.Rectangle((x_offset, y_offset), tile_size, tile_size,
                              facecolor='red', edgecolor='none', alpha=feature_values[(int(256/tile_size))*int(r/tile_size) + int(c/tile_size)])
 
@@ -153,17 +192,31 @@ for n in range(num1, num2):
             rect_mean_mask = plt.Rectangle((x_offset, y_offset), tile_size, tile_size,
                              facecolor = 'white', edgecolor = 'none', alpha = c_mean_mask[index_1, index_2])
 
+            rect_for_min_c = plt.Rectangle((x_offset, y_offset), tile_size, tile_size,
+                             facecolor='red', edgecolor='none', alpha=feature_values_c[(int(256/tile_size))*int(r/tile_size) + int(c/tile_size)])
+
+            rect_for_mean_c= plt.Rectangle((x_offset, y_offset), tile_size, tile_size,
+                             facecolor='red', edgecolor='none', alpha=feature_values_c[(int(256/tile_size))*int(r/tile_size) + int(c/tile_size)])
+
+
 
             ax[1,0].add_patch(rect_original)
 
-            ax[1,1].add_patch(rect_min_mask)
-            ax[2,1].add_patch(rect_mean_mask)
+            ax[1,1].add_patch(rect_convolve)
+
+            ax[1,2].add_patch(rect_min_mask)
+            ax[2,2].add_patch(rect_mean_mask)
 
             if(c_min_mask[index_1, index_2] == 1):
-                ax[1,2].add_patch(rect_for_min)
+                ax[1,3].add_patch(rect_for_min)
 
             if(c_mean_mask[index_1, index_2] == 1):
-                ax[2,2].add_patch(rect_for_mean)
+                ax[2,3].add_patch(rect_for_mean)
+
+            if(c_min_mask[index_1, index_2] == 1):
+               ax[1,4].add_patch(rect_for_min_c)
+            if(c_mean_mask[index_1, index_2] == 1):
+               ax[2,4].add_patch(rect_for_mean_c)
 
             index_2 += 1
         index_1 += 1
