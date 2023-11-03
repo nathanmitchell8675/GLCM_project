@@ -9,9 +9,10 @@ import cv2 as cv
 
 # Input number of convection files and tile size
 #Possible Examples: 16, 21, 25, 50, 55, 61
+#NEW: 10, *11*, 19
 num= 204
-num1 = 16
-num2 = 17
+num1 = 11
+num2 = 12
 tile_size = 4
 num_rows = int(256/tile_size)
 num_cols = int(256/tile_size)
@@ -53,17 +54,11 @@ for n in range(num1, num2):
     c_tile_mins  = []
 
 
-    #Define the convolve masks
-    #3x3 convolve mask
-    kernel_1 = np.ones((3,3), np.float32)/9
-    #5x5 convolve mask
-    kernel_2 = np.ones((5,5), np.float32)/25
-    #7x7 convolve mask
-    kernel_3 = np.ones((7,7), np.float32)/49
+    #Define the convolve mask
     #9x9 convolve mask
     kernel_4 = np.ones((9,9), np.float32)/81
 
-    #Applies the desired Kernel
+    #Apply the desired Kernel
     convolve_data = cv.filter2D(src = data, ddepth = -1, kernel = kernel_4)
 
     for r in range(0, 256, tile_size):
@@ -98,7 +93,7 @@ for n in range(num1, num2):
             glcm_c  = (glcm0_c + glcm1_c + glcm2_c + glcm3_c)/4 #compute mean matrix
             glcms_c.append(glcm_c)
 
-            contrast   = (float(graycoprops(glcm, 'contrast').ravel()[0]))
+            contrast = (float(graycoprops(glcm, 'contrast').ravel()[0]))
             contrast_value.append(contrast)
 
             contrast_c = (float(graycoprops(glcm_c, 'contrast').ravel()[0]))
@@ -132,34 +127,61 @@ for n in range(num1, num2):
     feature_values_c = contrast_values_c
     fig, ax = plt.subplots(3,5)
 
-    # og pic # convolve #           # ground truth # convolve
-    # glcm   # con glcm # min mask  # min on glcm  # min on convolve
-    #        #          # mean mask # mean on glcm # mean on convolve
+    # og pic # convolve  # ground truth    # convolve       #
+    # glcm   # min mask  # min on og glcm  # convolve glcm  # min on convolve glcm
+    #        # mean mask # mean on og mask #                # mean on convolve glcm
 
     ### COLUMN 1 ###
+    ax[0,0].set_title("Original Image")
     ax[0,0].imshow(data, cmap = 'gray', origin = 'lower')
+
+    ax[1,0].set_title("Original GLCM")
     ax[1,0].imshow(data, cmap = 'gray', origin = 'lower')
+
     ax[2,0].set_visible(False)
 
     ### COLUMN 2 ###
+    ax[0,1].set_title("Convolved Image")
     ax[0,1].imshow(convolve_data, cmap = 'gray', origin = 'lower')
+
+    ax[1,1].set_title("Min Mask")
     ax[1,1].imshow(data, cmap = 'gray', origin = 'lower')
-    ax[2,1].set_visible(False)
+
+    ax[2,1].set_title("Mean Mask")
+    ax[2,1].imshow(data, cmap = 'gray', origin = 'lower')
 
     ### COLUMN  3 ###
-    ax[0,2].set_visible(False)
+    ax[0,2].set_title("Ground Truth")
+    ax[0,2].imshow(data_truth, cmap = 'gray', origin = 'lower')
+
+    ax[1,2].set_title("Min Mask Applied")
     ax[1,2].imshow(data, cmap = 'gray', origin = 'lower')
+
+    ax[2,2].set_title("Mean Mask Applied")
     ax[2,2].imshow(data, cmap = 'gray', origin = 'lower')
 
     ### COLUMN 4 ###
-    ax[0,3].imshow(data_truth, cmap = 'gray', origin = 'lower')
+    ax[0,3].set_title("Convolved Image")
+    ax[0,3].imshow(convolve_data, cmap = 'gray', origin = 'lower')
+
+    ax[1,3].set_title("Convolve GLCM")
     ax[1,3].imshow(data, cmap = 'gray', origin = 'lower')
-    ax[2,3].imshow(data, cmap = 'gray', origin = 'lower')
+
+    ax[2,3].set_visible(False)
 
     ### COLUMN 5 ###
     ax[0,4].set_visible(False)
+
+    ax[1,4].set_title("Min Mask Applied")
     ax[1,4].imshow(data, cmap = 'gray', origin = 'lower')
+
+    ax[2,4].set_title("Mean Mask Applied")
     ax[2,4].imshow(data, cmap = 'gray', origin = 'lower')
+
+    for i in range (0,3):
+        for j in range (0,5):
+            ax[i,j].set_xticks([])
+            ax[i,j].set_yticks([])
 
     plt.xlim(0,256)
     plt.ylim(0,256)
@@ -199,22 +221,27 @@ for n in range(num1, num2):
                              facecolor='red', edgecolor='none', alpha=feature_values_c[(int(256/tile_size))*int(r/tile_size) + int(c/tile_size)])
 
 
-
+            #GLCM applied to Original Image
             ax[1,0].add_patch(rect_original)
 
-            ax[1,1].add_patch(rect_convolve)
+            #GLCM applied to Convolved Image
+            ax[1,3].add_patch(rect_convolve)
 
-            ax[1,2].add_patch(rect_min_mask)
-            ax[2,2].add_patch(rect_mean_mask)
+            #min and mean masks only
+            ax[1,1].add_patch(rect_min_mask)
+            ax[2,1].add_patch(rect_mean_mask)
 
+            #Min Mask applied to original GLCM
             if(c_min_mask[index_1, index_2] == 1):
-                ax[1,3].add_patch(rect_for_min)
-
+                ax[1,2].add_patch(rect_for_min)
+            #Mean Mask applied to original GLCM
             if(c_mean_mask[index_1, index_2] == 1):
-                ax[2,3].add_patch(rect_for_mean)
+                ax[2,2].add_patch(rect_for_mean)
 
+            #Min Mask applied to convolved GLCM
             if(c_min_mask[index_1, index_2] == 1):
                ax[1,4].add_patch(rect_for_min_c)
+            #Mean Mask applied to convolved GLCM
             if(c_mean_mask[index_1, index_2] == 1):
                ax[2,4].add_patch(rect_for_mean_c)
 
