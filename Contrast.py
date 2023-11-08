@@ -1,4 +1,6 @@
 import numpy as np
+import matplotlib.cm as cm
+import matplotlib as mpl
 from matplotlib import pyplot as plt
 from matplotlib import patches
 from matplotlib import axes
@@ -11,9 +13,9 @@ import cv2 as cv
 #Possible Examples: 16, 21, 25, 50, 55, 61
 #NEW: 10, *11*, 19
 num= 204
-num1 = 11
-num2 = 12
-tile_size = 4
+num1 = 21
+num2 = 22
+tile_size = 16
 num_rows = int(256/tile_size)
 num_cols = int(256/tile_size)
 num_tiles = int(num_rows * num_cols)
@@ -26,7 +28,7 @@ data = np.fromfile(f,dtype='float32')
 
 for j in range(num1, num2):
         x_train_vis[j,:,:,:] = np.reshape(data[(j*(692224)):(j*(692224)+589824)],(256,256,9))
-        y_train[j,:,:] = np.reshape(data[(626688 + j*(692224)):(626688+j*(692224)+65536)], (256,256))
+        y_train[j,:,:] = np.reshape(data[(626688 + j*(692224)):(626688+j*(692224)+65536)], (256,256)) 
 
 # Split sample images into tiles, compute GLCMs and Haralick statistics, create image
 for n in range(num1, num2):
@@ -38,6 +40,18 @@ for n in range(num1, num2):
     data_truth = y_train[isamp,:,:]
     data_truth *= 100
     data_truth = data_truth.astype(np.uint8)
+
+    data_truth_color = np.zeros(len(data_truth)*len(data_truth)*4)
+    data_truth_color = data_truth_color.reshape(len(data_truth),len(data_truth),4)
+
+    for i in range(len(data_truth)):
+        for j in range(len(data_truth)):
+            if(data_truth[i,j] == 156):
+                data_truth_color[i,j,:] = [1,1,1,1]
+            elif(data_truth[i,j] == 100):
+                data_truth_color[i,j,:] = [1,0,0,0.5]
+            else:
+                data_truth_color[i,j,:] = [1,0,0,1]
 
     tiles = []
     convolve_tiles = []
@@ -56,10 +70,10 @@ for n in range(num1, num2):
 
     #Define the convolve mask
     #9x9 convolve mask
-    kernel_4 = np.ones((9,9), np.float32)/81
+    kernel_9x9 = np.ones((9,9), np.float32)/81
 
     #Apply the desired Kernel
-    convolve_data = cv.filter2D(src = data, ddepth = -1, kernel = kernel_4)
+    convolve_data = cv.filter2D(src = data, ddepth = -1, kernel = kernel_9x9)
 
     for r in range(0, 256, tile_size):
         for c in range(0, 256, tile_size):
@@ -108,18 +122,21 @@ for n in range(num1, num2):
     c_tile_mins = np.array(c_tile_mins)
     c_tile_mins = c_tile_mins.reshape((int(256/tile_size), int(256/tile_size)))
 
-    c_mean_mask = (c_tile_means >= c_mean_avg).astype(int)
-    c_min_mask  = (c_tile_mins  >= c_mins_avg).astype(int)
+    c_mean_mask = (c_tile_means >= c_mean_avg + 15).astype(int)
+    c_min_mask  = (c_tile_mins  >= c_mins_avg + 15).astype(int)
 
 
     contrast_max   = max(contrast_value)
     contrast_max_c = max(contrast_value_c)
+    contrast_min   = min(contrast_value)
+    contrast_min_c = min(contrast_value_c)
+
 
     for val in contrast_value:
-        contrast_values.append(val/contrast_max)
+        contrast_values.append((val - contrast_min)/(contrast_max - contrast_min))
 
     for val in contrast_value_c:
-        contrast_values_c.append(val/contrast_max_c)
+        contrast_values_c.append((val - contrast_min_c)/(contrast_max_c - contrast_min_c))
 
     #Declare feature
     feature = 'contrast'
@@ -135,8 +152,9 @@ for n in range(num1, num2):
     ax[0,0].set_title("Original Image")
     ax[0,0].imshow(data, cmap = 'gray', origin = 'lower')
 
-    ax[1,0].set_title("Original GLCM")
-    ax[1,0].imshow(data, cmap = 'gray', origin = 'lower')
+    ax2 = ax[1,0]
+    ax2.set_title("Original GLCM")
+    ax2.imshow(data, cmap = 'gray', origin = 'lower')
 
     ax[2,0].set_visible(False)
 
@@ -152,7 +170,7 @@ for n in range(num1, num2):
 
     ### COLUMN  3 ###
     ax[0,2].set_title("Ground Truth")
-    ax[0,2].imshow(data_truth, cmap = 'gray', origin = 'lower')
+    ax[0,2].imshow(data_truth_color, cmap = 'gray', origin = 'lower')
 
     ax[1,2].set_title("Min Mask Applied")
     ax[1,2].imshow(data, cmap = 'gray', origin = 'lower')
@@ -247,4 +265,6 @@ for n in range(num1, num2):
 
             index_2 += 1
         index_1 += 1
+
     plt.show()
+
