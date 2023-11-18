@@ -13,9 +13,9 @@ import cv2 as cv
 #Possible Examples: 16, 21, 25, 50, 55, 61
 #NEW: 10, *11*, 19
 num= 204
-num1 = 21
-num2 = 22
-tile_size = 16
+num1 = 10
+num2 = 11
+tile_size = 4
 num_rows = int(256/tile_size)
 num_cols = int(256/tile_size)
 num_tiles = int(num_rows * num_cols)
@@ -28,7 +28,7 @@ data = np.fromfile(f,dtype='float32')
 
 for j in range(num1, num2):
         x_train_vis[j,:,:,:] = np.reshape(data[(j*(692224)):(j*(692224)+589824)],(256,256,9))
-        y_train[j,:,:] = np.reshape(data[(626688 + j*(692224)):(626688+j*(692224)+65536)], (256,256)) 
+        y_train[j,:,:] = np.reshape(data[(626688 + j*(692224)):(626688+j*(692224)+65536)], (256,256))
 
 # Split sample images into tiles, compute GLCMs and Haralick statistics, create image
 for n in range(num1, num2):
@@ -46,12 +46,10 @@ for n in range(num1, num2):
 
     for i in range(len(data_truth)):
         for j in range(len(data_truth)):
-            if(data_truth[i,j] == 156):
-                data_truth_color[i,j,:] = [1,1,1,1]
-            elif(data_truth[i,j] == 100):
-                data_truth_color[i,j,:] = [1,0,0,0.5]
-            else:
+            if(data_truth[i,j] == 100):
                 data_truth_color[i,j,:] = [1,0,0,1]
+            else:
+                data_truth_color[i,j,:] = [1,1,1,1]
 
     tiles = []
     convolve_tiles = []
@@ -122,21 +120,22 @@ for n in range(num1, num2):
     c_tile_mins = np.array(c_tile_mins)
     c_tile_mins = c_tile_mins.reshape((int(256/tile_size), int(256/tile_size)))
 
-    c_mean_mask = (c_tile_means >= c_mean_avg + 15).astype(int)
-    c_min_mask  = (c_tile_mins  >= c_mins_avg + 15).astype(int)
+    c_mean_mask = (c_tile_means >= c_mean_avg).astype(int)
+    c_min_mask  = (c_tile_mins  >= c_mins_avg).astype(int)
 
 
-    contrast_max   = max(contrast_value)
-    contrast_max_c = max(contrast_value_c)
-    contrast_min   = min(contrast_value)
-    contrast_min_c = min(contrast_value_c)
+    contrast_max   = max(max(contrast_value), max(contrast_value_c))
+    contrast_min   = min(min(contrast_value), min(contrast_value_c))
 
 
     for val in contrast_value:
         contrast_values.append((val - contrast_min)/(contrast_max - contrast_min))
 
     for val in contrast_value_c:
-        contrast_values_c.append((val - contrast_min_c)/(contrast_max_c - contrast_min_c))
+        contrast_values_c.append((val - contrast_min)/(contrast_max - contrast_min))
+
+    print(np.mean(contrast_value_c))
+
 
     #Declare feature
     feature = 'contrast'
