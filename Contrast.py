@@ -8,13 +8,19 @@ from skimage.feature import graycomatrix, graycoprops
 
 import skimage as ski
 import cv2 as cv
+import pickle as pkl
+###############################
+
+filepath = r'/home/nmitchell/GLCM_project/metrics'
+with open(filepath, 'rb') as file:
+    metrics = pkl.load(file)
 
 # Input number of convection files and tile size
 #Possible Examples: 16, 21, 25, 50, 55, 61
 #NEW: 10, *11*, 19
 num= 204
-num1 = 10
-num2 = 11
+num1 = 16
+num2 = 17
 tile_size = 4
 num_rows = int(256/tile_size)
 num_cols = int(256/tile_size)
@@ -33,23 +39,31 @@ for j in range(num1, num2):
 # Split sample images into tiles, compute GLCMs and Haralick statistics, create image
 for n in range(num1, num2):
     isamp = n
-    data = x_train_vis[isamp,:,:,0]
-    data *= 100
-    data=data.astype(np.uint8)
+#    data = x_train_vis[isamp,:,:,0]
+#    data *= 100
+#    data=data.astype(np.uint8)
 
-    data_truth = y_train[isamp,:,:]
-    data_truth *= 100
-    data_truth = data_truth.astype(np.uint8)
+#    data_truth = y_train[isamp,:,:]
+#    data_truth *= 100
+#    data_truth = data_truth.astype(np.uint8)
 
-    data_truth_color = np.zeros(len(data_truth)*len(data_truth)*4)
-    data_truth_color = data_truth_color.reshape(len(data_truth),len(data_truth),4)
+#    data_truth_color = np.zeros(len(data_truth)*len(data_truth)*4)
+#    data_truth_color = data_truth_color.reshape(len(data_truth),len(data_truth),4)
 
-    for i in range(len(data_truth)):
-        for j in range(len(data_truth)):
-            if(data_truth[i,j] == 100):
-                data_truth_color[i,j,:] = [1,0,0,1]
-            else:
-                data_truth_color[i,j,:] = [1,1,1,1]
+#    for i in range(len(data_truth)):
+#        for j in range(len(data_truth)):
+#            if(data_truth[i,j] == 100):
+#                data_truth_color[i,j,:] = [1,0,0,1]
+#            else:
+#                data_truth_color[i,j,:] = [1,1,1,1]
+
+
+#    print(metrics['Original Image'][num1])
+#    print(metrics['Original Image'][10])
+
+    data = metrics['Original Image'][isamp - 1]
+    data_truth_color = metrics['Ground Truth'][isamp - 1]
+    convolve_data = metrics['Convolved Image'][isamp - 1]
 
     tiles = []
     convolve_tiles = []
@@ -68,10 +82,10 @@ for n in range(num1, num2):
 
     #Define the convolve mask
     #9x9 convolve mask
-    kernel_9x9 = np.ones((9,9), np.float32)/81
+ #   kernel_9x9 = np.ones((9,9), np.float32)/81
 
     #Apply the desired Kernel
-    convolve_data = cv.filter2D(src = data, ddepth = -1, kernel = kernel_9x9)
+#    convolve_data = cv.filter2D(src = data, ddepth = -1, kernel = kernel_9x9)
 
     for r in range(0, 256, tile_size):
         for c in range(0, 256, tile_size):
@@ -133,9 +147,6 @@ for n in range(num1, num2):
 
     for val in contrast_value_c:
         contrast_values_c.append((val - contrast_min)/(contrast_max - contrast_min))
-
-    print(np.mean(contrast_value_c))
-
 
     #Declare feature
     feature = 'contrast'
