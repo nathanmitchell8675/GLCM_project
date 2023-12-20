@@ -6,7 +6,7 @@ from skimage.feature import graycomatrix, graycoprops
 # Input number of convection files and tile size
 num= 204
 num1 = 0
-num2 = 204
+num2 = 10
 tile_size = 4
 num_rows = int(256/tile_size)
 num_cols = int(256/tile_size)
@@ -56,9 +56,6 @@ for n in range(num1, num2):
     data_truth_color = np.zeros(len(data_truth)*len(data_truth)*4)
     data_truth_color = data_truth_color.reshape(len(data_truth),len(data_truth),4)
 
-#    print(data_truth.shape)
-#    print(data_IR.shape)
-
     for i in range(len(data_truth)):
         for j in range(len(data_truth)):
             if(data_truth[i,j] == 100):
@@ -69,11 +66,12 @@ for n in range(num1, num2):
 
     kernel_9x9 = np.ones((9,9), np.float32)/81
     convolve_data = cv.filter2D(src = data, ddepth = -1, kernel = kernel_9x9)
+    resized_IR = cv.resize(data_IR.astype('float32'), (256, 256), interpolation = cv.INTER_CUBIC)
 
     metrics['Original Image'].append(data)
     metrics['Ground Truth'].append(data_truth_color)
     metrics['Convolved Image'].append(convolve_data)
-    metrics['Infrared Image'].append(data_IR)
+    metrics['Infrared Image'].append(resized_IR)
     metrics['Mean Brightness'].append(np.mean(data))
     metrics['Min Brightness'].append(np.min(data))
 
@@ -131,8 +129,8 @@ for n in range(num1, num2):
     metrics["Tile Mean Mask"][isamp] = (metrics["Tile Mean Mask"][isamp] >= np.mean(metrics["Mean Brightness"])).astype(int)
     metrics["Tile Min Mask"][isamp]  = (metrics["Tile Min Mask"][isamp]  >= np.mean(metrics["Mean Brightness"])).astype(int)
     metrics["IR Mask"].append((metrics["Infrared Image"][isamp] <= 250).astype(int))
-#    metrics["IR Mask"].append(metrics["Infrared Image"][isamp])
 
 filepath = r'/home/nmitchell/GLCM_project/'
 filepath+= 'metrics'
 pkl.dump(metrics, open(filepath, 'wb'))
+
